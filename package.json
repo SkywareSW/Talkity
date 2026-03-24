@@ -1,6 +1,6 @@
 {
   "name": "talkity",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Talkity – MSN-inspired real time messenger",
   "main": "app/main.js",
   "scripts": {

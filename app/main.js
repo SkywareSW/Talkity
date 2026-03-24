@@ -49,6 +49,8 @@ function getServerScriptPath() {
   return path.join(__dirname, '..', 'server', 'index.js');
 }
 
+
+
 // ── Window ────────────────────────────────────────────────────────
 
 function createWindow() {
@@ -211,11 +213,16 @@ ipcMain.handle('server:start', async (_, { useNgrok }) => {
   const serverEnv = {
     ...process.env,
     PORT: '3747',
+    // ELECTRON_RUN_AS_NODE=1 makes the Electron binary behave exactly like
+    // plain `node`, so we can reuse process.execPath in both dev and packaged
+    // builds without ever accidentally spawning a second Electron window.
+    ELECTRON_RUN_AS_NODE: '1',
     // Ensure require() can find node_modules when running as extraResource
     NODE_PATH: path.join(path.dirname(serverPath), 'node_modules'),
   };
 
   return new Promise((resolve) => {
+    const nodeBin = getNodeBinaryPath();
     serverProcess = spawn(process.execPath, [serverPath], {
       env: serverEnv,
       cwd: path.dirname(serverPath),

@@ -65,19 +65,25 @@ jobs:
           sudo apt-get install -y rpm fakeroot dpkg
 
       # ── Build & publish ─────────────────────────────────────────
+      - name: Unset Windows signing vars
+        if: matrix.platform == 'win'
+        shell: pwsh
+        run: |
+          echo "WIN_CSC_LINK=" >> $env:GITHUB_ENV
+          echo "WIN_CSC_KEY_PASSWORD=" >> $env:GITHUB_ENV
+          echo "CSC_LINK=" >> $env:GITHUB_ENV
+          echo "CSC_KEY_PASSWORD=" >> $env:GITHUB_ENV
+
       - name: Build and publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ matrix.platform == 'mac' && 'true' || 'false' }}
           # Apple credentials — only populated on mac runner
           APPLE_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_ID || '' }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.platform == 'mac' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_TEAM_ID || '' }}
           CSC_LINK: ${{ matrix.platform == 'mac' && secrets.APPLE_CERTIFICATE || '' }}
           CSC_KEY_PASSWORD: ${{ matrix.platform == 'mac' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
-          # Disable signing auto-discovery on Windows/Linux runners
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ matrix.platform == 'mac' && 'true' || 'false' }}
-          WIN_CSC_LINK: ''
-          WIN_CSC_KEY_PASSWORD: ''
         run: npm run release -- --${{ matrix.platform }}
 
       # ── Upload artifacts for inspection (optional) ──────────────

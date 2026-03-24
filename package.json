@@ -29,6 +29,7 @@
     "appId": "com.talkity.app",
     "productName": "Talkity",
     "copyright": "Copyright © 2026 Talkity",
+    "icon": "app/icon.ico",
     "directories": {
       "output": "dist"
     },

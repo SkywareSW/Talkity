@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!--
+  FIX: CSP now allows any http/https/ws/wss origin for script-src and connect-src,
+  so connecting to remote servers (not just localhost:3747) works without a
+  "Refused to connect" CSP violation.
+  The previous policy hardcoded localhost:3747 which broke remote server connections.
+-->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' https://cdn.socket.io;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src 'self' https://fonts.gstatic.com;
+  img-src 'self' data: blob:;
+  connect-src *;
+">
+<title>Talkity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ████ LOGIN SCREEN ████ -->
+<div id="loginScreen" class="screen-login">
+  <div class="login-wallpaper"></div>
+  <div class="login-orbs">
+    <div class="lo lo1"></div><div class="lo lo2"></div>
+    <div class="lo lo3"></div><div class="lo lo4"></div>
+  </div>
+
+  <div class="login-card">
+    <div class="login-card-shine"></div>
+    <div class="login-logo">
+      <div class="login-logo-bubble">
+        <svg width="52" height="52" viewBox="0 0 52 52"><defs>
+          <radialGradient id="lgbg" cx="38%" cy="28%" r="70%">
+            <stop offset="0%" stop-color="#88eeff"/>
+            <stop offset="52%" stop-color="#1898f0"/>
+            <stop offset="100%" stop-color="#0448b8"/>
+          </radialGradient>
+          <radialGradient id="lgsh" cx="36%" cy="22%" r="58%">
+            <stop offset="0%" stop-color="rgba(255,255,255,0.82)"/>
+            <stop offset="58%" stop-color="rgba(255,255,255,0.05)"/>
+            <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+          </radialGradient>
+        </defs>
+        <circle cx="26" cy="26" r="24" fill="url(#lgbg)"/>
+        <text x="26" y="33" text-anchor="middle" font-size="22" fill="white" font-family="sans-serif">💬</text>
+        <circle cx="26" cy="26" r="24" fill="url(#lgsh)"/>
+        <circle cx="26" cy="26" r="23.5" fill="none" stroke="rgba(255,255,255,0.52)" stroke-width="1.2"/>
+        </svg>
+      </div>
+      <div class="login-brand">Talkity</div>
+      <div class="login-tagline">Chat with your friends ✨</div>
+    </div>
+    <div class="login-fields">
+      <div class="login-field-group">
+        <label class="lf-label">Your display name</label>
+        <input id="loginUsername" class="lf-input" type="text" placeholder="e.g. Ashley or Brandon..." maxlength="24" autocomplete="off">
+      </div>
+      <div class="lf-label" style="margin-bottom:6px;">Pick your avatar</div>
+      <div class="avatar-picker" id="avatarPicker"></div>
+      <div class="login-field-group">
+        <label class="lf-label">Server address</label>
+        <input id="loginServer" class="lf-input" type="text" value="localhost:3747" placeholder="localhost:3747" autocomplete="off">
+        <div class="lf-hint">Your friend who runs the server shares this with you</div>
+      </div>
+      <!-- ── LOGIN HOST PANEL ── -->
+      <div class="lhp hidden" id="loginHostPanel">
+        <div class="lhp-header" id="lhpToggle">
+          <div class="lhp-dot idle" id="lhpDot"></div>
+          <div class="lhp-title">Host a server</div>
+          <div class="lhp-chevron" id="lhpChevron">▼</div>
+        </div>
+        <div class="lhp-body hidden" id="lhpBody">
+          <div class="lhp-mode-row">
+            <div class="lhp-mode-btn active" id="lhpModeLan" data-mode="lan">🏠 LAN</div>
+            <div class="lhp-mode-btn" id="lhpModeNgrok" data-mode="ngrok">🌐 Internet</div>
+          </div>
+          <div class="lhp-ngrok-hint hidden" id="lhpNgrokHint">
+            Requires <b>ngrok</b> installed + logged in.
+            <span class="lhp-ngrok-link" id="lhpNgrokLink">ngrok.com/download ↗</span>
+          </div>
+          <div class="lhp-start-btn" id="lhpStartBtn">
+            <span class="lhp-start-shine"></span>
+            <span id="lhpStartText">▶ Start Server</span>
+          </div>
+          <div class="lhp-addr hidden" id="lhpAddr">
+            <div class="lhp-addr-row" id="lhpLanRow">
+              <span>🏠</span>
+              <span class="lhp-addr-val" id="lhpLanVal">—</span>
+              <span class="lhp-copy" id="lhpCopyLan">⧉</span>
+            </div>
+            <div class="lhp-addr-row hidden" id="lhpNgrokRow">
+              <span>🌐</span>
+              <span class="lhp-addr-val" id="lhpNgrokVal">—</span>
+              <span class="lhp-copy" id="lhpCopyNgrok">⧉</span>
+            </div>
+            <div class="lhp-ngrok-err hidden" id="lhpNgrokErr"></div>
+          </div>
+          <div class="lhp-log" id="lhpLog"></div>
+        </div>
+      </div>
+
+      <button class="login-btn" id="loginBtn">
+        <span class="login-btn-shine"></span>
+        <span class="login-btn-text">Sign in to Talkity →</span>
+      </button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ████ MAIN APP ████ -->
+<div id="appScreen" class="screen-app hidden">
+
+  <div class="wallpaper"></div>
+  <div class="orb o1"></div><div class="orb o2"></div>
+  <div class="orb o3"></div><div class="orb o4"></div>
+
+  <div class="titlebar" id="titlebar">
+    <div class="tb-drag">
+      <div class="tb-icon">💬</div>
+      <div class="tb-name">Talkity</div>
+      <div class="tb-dot" id="connDot" title="Disconnected"></div>
+    </div>
+    <div class="tb-controls">
+      <div class="wc wc-n" id="winMin">─</div>
+      <div class="wc wc-m" id="winMax">□</div>
+      <div class="wc wc-x" id="winClose">✕</div>
+    </div>
+  </div>
+
+  <div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-glow"></div>
+
+      <div class="my-profile" id="myProfile">
+        <div class="my-av-wrap" id="myAvWrap"></div>
+        <div class="my-info">
+          <div class="my-name" id="myName">You</div>
+          <div class="my-mood" id="myMood" contenteditable="true" spellcheck="false">Click to set mood...</div>
+        </div>
+        <div class="my-status-btn" id="myStatusBtn" title="Change status">🟢</div>
+      </div>
+
+      <div class="status-menu hidden" id="statusMenu">
+        <div class="sm-item" data-status="online">🟢 Online</div>
+        <div class="sm-item" data-status="away">🟡 Away</div>
+        <div class="sm-item" data-status="busy">🔴 Busy</div>
+        <div class="sm-item" data-status="invisible">⚫ Invisible</div>
+      </div>
+
+      <div class="sb-search-wrap">
+        <span class="sb-si">🔍</span>
+        <input class="sb-search" id="sbSearch" type="text" placeholder="Search friends...">
+      </div>
+
+      <div class="sb-section-label" id="onlineLabel">Online</div>
+      <div class="contacts-list" id="contactsList">
+        <div class="no-friends">
+          <div style="font-size:32px;margin-bottom:8px;">🌐</div>
+          <div>Waiting for friends to join...</div>
+          <div style="font-size:10px;opacity:.6;margin-top:4px;">Share your server address!</div>
+        </div>
+      </div>
+
+      <!-- ── HOST SERVER PANEL ── -->
+      <div class="host-panel" id="hostPanel">
+        <div class="host-panel-shine"></div>
+
+        <!-- Collapsed row -->
+        <div class="host-collapsed" id="hostCollapsed">
+          <div class="host-status-dot idle" id="hostDot"></div>
+          <div class="host-label">Host Server</div>
+          <div class="host-chevron" id="hostExpandBtn" title="Expand">▲</div>
+        </div>
+
+        <!-- Expanded content -->
+        <div class="host-expanded hidden" id="hostExpanded">
+          <div class="host-exp-header">
+            <div class="host-status-dot idle" id="hostDot2"></div>
+            <div class="host-exp-title">Host Server</div>
+            <div class="host-chevron" id="hostCollapseBtn" title="Collapse">▼</div>
+          </div>
+
+          <!-- LAN / Internet toggle -->
+          <div class="host-mode-row" id="hostModeRow">
+            <div class="host-mode-btn active" id="modeLan" data-mode="lan">🏠 LAN</div>
+            <div class="host-mode-btn" id="modeNgrok" data-mode="ngrok">🌐 Internet</div>
+          </div>
+
+          <!-- ngrok note -->
+          <div class="host-note hidden" id="hostNgrokHint">
+            Requires <b>ngrok</b> installed + logged in.<br>
+            <span class="host-note-link" id="ngrokLink">ngrok.com/download ↗</span>
+          </div>
+
+          <!-- Start/Stop button -->
+          <div class="host-start-btn" id="hostStartBtn">
+            <span class="host-start-shine"></span>
+            <span id="hostStartText">▶ Start Server</span>
+          </div>
+
+          <!-- Address card -->
+          <div class="host-addr-card hidden" id="hostAddrCard">
+            <div class="host-addr-row" id="hostLanRow">
+              <span class="host-addr-icon">🏠</span>
+              <span class="host-addr-val" id="hostLanVal">—</span>
+              <span class="host-copy-btn" id="hostCopyLan" title="Copy">⧉</span>
+            </div>
+            <div class="host-addr-row hidden" id="hostNgrokRow">
+              <span class="host-addr-icon">🌐</span>
+              <span class="host-addr-val" id="hostNgrokVal">—</span>
+              <span class="host-copy-btn" id="hostCopyNgrok" title="Copy">⧉</span>
+            </div>
+            <div class="host-ngrok-err hidden" id="hostNgrokErr"></div>
+          </div>
+
+          <!-- Mini log -->
+          <div class="host-log" id="hostLog"></div>
+        </div>
+      </div>
+
+      <!-- Bottom bar -->
+      <!-- ROOMS SECTION -->
+      <div class="sb-section-label" style="margin-top:6px;">Rooms <span id="createRoomBtn" style="cursor:pointer;margin-left:4px;opacity:.7;font-size:11px;" title="Create room">＋</span></div>
+      <div class="contacts-list" id="roomsList" style="max-height:130px;flex:none;"></div>
+
+      <!-- FRIENDS PANEL -->
+      <div class="host-panel hidden" id="friendsPanel" style="max-height:160px;overflow-y:auto;">
+        <div class="host-exp-title" style="padding:8px 10px 4px;">Friends</div>
+        <div id="friendsList"></div>
+        <div style="padding:6px 10px;">
+          <input id="addFriendInput" class="sb-search" placeholder="Add friend by name..." style="width:100%;font-size:10px;">
+        </div>
+      </div>
+
+      <div class="sb-bottom">
+        <div class="sb-bottom-btn" id="themeToggleBtn" title="Toggle theme">🌙</div>
+        <div class="sb-bottom-btn" id="friendsBtn" title="Friends">🤝</div>
+        <div class="sb-bottom-btn" id="signOutBtn" title="Sign out">🚪 Sign out</div>
+        <div class="sb-bottom-btn" id="serverInfoBtn" title="Server info">🌐</div>
+      </div>
+    </div>
+
+    <!-- CHAT AREA -->
+    <div class="chat-area">
+      <div class="chat-empty" id="chatEmpty">
+        <div class="ce-bubble">💬</div>
+        <div class="ce-title">Pick a friend to chat with!</div>
+        <div class="ce-sub">Your conversations will appear here ✨</div>
+      </div>
+
+      <div class="chat-panel hidden" id="chatPanel">
+        <div class="chat-header" id="chatHeader">
+          <div class="ch-av" id="chAv"></div>
+          <div class="ch-info">
+            <div class="ch-name" id="chName">—</div>
+            <div class="ch-status" id="chStatus">—</div>
+          </div>
+          <div class="ch-actions">
+            <div class="ch-btn" id="nudgeBtn" title="Send a Nudge! 💫">💫</div>
+            <div class="ch-btn" title="Voice call (coming soon)">🎙️</div>
+          </div>
+        </div>
+
+        <div class="messages-area" id="messagesArea">
+          <div class="msgs-inner" id="msgsInner"></div>
+          <div class="typing-row hidden" id="typingRow">
+            <div class="typing-av" id="typingAv"></div>
+            <div class="typing-bubble">
+              <div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-zone">
+          <div id="inputZoneInner">
+            <div class="emoji-tray hidden" id="emojiTray"></div>
+            <div class="input-toolbar">
+              <!-- data-action="bold" and data-action="italic" are now wired up in renderer.js -->
+              <div class="it-btn" data-action="bold"   title="Bold"><b>B</b></div>
+              <div class="it-btn" data-action="italic" title="Italic"><i>I</i></div>
+              <div class="it-sep"></div>
+              <div class="it-btn" id="emojiToggle" title="Emoji">😊</div>
+              <div class="it-sep"></div>
+              <div class="it-btn" id="imgAttachBtn" title="Send an image 📷">📷</div>
+              <div class="it-sep"></div>
+              <div class="it-btn" data-action="nudge" title="Nudge!" style="font-size:13px">💫</div>
+            </div>
+            <div class="input-row">
+              <textarea id="msgInput" class="msg-input" placeholder="Type a message... (Enter to send, right-click bubble to react)" rows="1" maxlength="2000"></textarea>
+              <button class="send-btn" id="sendBtn">
+                <span class="send-shine"></span>
+                <span class="send-icon">➤</span>
+              </button>
+            </div>
+          </div>
+          <input type="file" id="imgFileInput" accept="image/*" style="display:none;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Server info modal -->
+  <div class="modal-overlay hidden" id="serverModal">
+    <div class="modal-card">
+      <div class="modal-shine"></div>
+      <div class="modal-title">🌐 Host a Talkity Server</div>
+      <div class="modal-body">
+        <p>To let friends join from anywhere, you need an ngrok tunnel.</p>
+        
+        <div id="ngrokTokenSection" style="margin-top:15px; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; border: 1px solid rgba(255,255,255,0.1);">
+            <p style="font-size:12px; margin-bottom:8px; font-weight: 700; color: var(--aero-blue1);">1. Set your Auth Token (One-time setup)</p>
+            <input type="text" id="ngrokTokenInput" placeholder="Paste ngrok Auth Token here..." 
+                   style="width:100%; padding:8px; border-radius:4px; border:none; background: rgba(255,255,255,0.9); color: #000; outline: none; margin-bottom: 8px;">
+            <button id="saveTokenBtn" class="modal-close-btn" style="position: static; width:100%; height: 35px; font-size: 13px; cursor: pointer;">
+              Save Token
+            </button>
+            <p style="font-size:10px; margin-top:8px; text-align: center;">
+                <a href="#" id="getTokenLink" style="color:var(--aero-blue2); text-decoration: underline;">Click here to get your free token from ngrok.com</a>
+            </p>
+        </div>
+
+        <p style="margin-top: 15px; font-size: 12px; font-weight: 700; color: var(--aero-blue1);">2. Your Server Status:</p>
+        <div class="modal-server-box" id="modalServerBox">
+          </div>
+      </div>
+      <button class="modal-close-btn" id="modalCloseBtn">Close ✕</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+<script src="renderer.js"></script>
+</body>
+</html>

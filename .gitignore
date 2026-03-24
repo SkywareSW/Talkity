@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+npm-debug.log*
+
+# electron-builder temp files
+app-update.yml
+latest*.yml
+
+# macOS
+*.iconset/
+
+# Windows
+Thumbs.db

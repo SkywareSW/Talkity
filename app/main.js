@@ -39,6 +39,16 @@ function sendToRenderer(channel, payload) {
   }
 }
 
+// ── Icon path helper ──────────────────────────────────────────────
+// Icons are listed in asarUnpack so they land in app.asar.unpacked
+// in packaged builds, rather than being locked inside the asar archive.
+function iconPath(filename) {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'app.asar.unpacked', 'app', filename);
+  }
+  return path.join(__dirname, filename);
+}
+
 // ── Resolve the server script path ───────────────────────────────
 // In dev:       <repo>/server/index.js
 // In packaged:  resources/server/index.js  (via extraResources)
@@ -65,10 +75,10 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
     },
-    // FIX: use .ico on Windows so the taskbar & Start Menu show the icon correctly
+    // FIX: use iconPath() so packaged builds find the unpacked .ico
     icon: process.platform === 'win32'
-      ? path.join(__dirname, 'icon.ico')
-      : path.join(__dirname, 'icon.png'),
+      ? iconPath('icon.ico')
+      : iconPath('icon.png'),
     titleBarStyle: 'hidden',
   });
 
@@ -125,7 +135,6 @@ function checkForUpdates() {
       transferred: progress.transferred,
       total: progress.total,
     });
-    // Show in taskbar on Windows
     if (mainWindow && process.platform === 'win32') {
       mainWindow.setProgressBar(progress.percent / 100);
     }
@@ -179,22 +188,17 @@ ipcMain.on('window:close', () => mainWindow?.close());
 
 // ── Icon state ────────────────────────────────────────────────────
 
-// FIX: use .ico on Windows for taskbar overlay icons
-const ICON_NORMAL = process.platform === 'win32'
-  ? path.join(__dirname, 'icon.ico')
-  : path.join(__dirname, 'icon.png');
-
-const ICON_UNREAD = process.platform === 'win32'
-  ? path.join(__dirname, 'icon_unread.ico')
-  : path.join(__dirname, 'icon_unread.png');
+// FIX: resolve via iconPath() so packaged builds find the unpacked files
+const ICON_NORMAL = process.platform === 'win32' ? iconPath('icon.ico')        : iconPath('icon.png');
+const ICON_UNREAD = process.platform === 'win32' ? iconPath('icon_unread.ico') : iconPath('icon_unread.png');
 
 ipcMain.on('icon:set', (_, state) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  const iconPath = state === 'unread' ? ICON_UNREAD : ICON_NORMAL;
-  mainWindow.setIcon(iconPath);
+  const icon = state === 'unread' ? ICON_UNREAD : ICON_NORMAL;
+  mainWindow.setIcon(icon);
   if (process.platform === 'win32') {
     if (state === 'unread') {
-      mainWindow.setOverlayIcon(iconPath, 'Unread messages');
+      mainWindow.setOverlayIcon(icon, 'Unread messages');
       mainWindow.flashFrame(true);
     } else {
       mainWindow.setOverlayIcon(null, '');
@@ -216,15 +220,10 @@ ipcMain.handle('server:start', async (_, { useNgrok }) => {
 
   const serverPath = getServerScriptPath();
 
-  // In packaged builds, node_modules live next to server/index.js
   const serverEnv = {
     ...process.env,
     PORT: '3747',
-    // ELECTRON_RUN_AS_NODE=1 makes the Electron binary behave exactly like
-    // plain `node`, so we can reuse process.execPath in both dev and packaged
-    // builds without ever accidentally spawning a second Electron window.
     ELECTRON_RUN_AS_NODE: '1',
-    // Ensure require() can find node_modules when running as extraResource
     NODE_PATH: path.join(path.dirname(serverPath), 'node_modules'),
   };
 

@@ -21,9 +21,9 @@
     "socket.io-client": "^4.7.4"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.3",
     "electron": "^29.0.0",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "@electron/rebuild": "^4.0.3"
   },
   "build": {
     "appId": "com.talkity.app",
@@ -35,6 +35,14 @@
     "files": [
       "app/**/*",
       "!app/node_modules"
+    ],
+    "asarUnpack": [
+      "app/icon.ico",
+      "app/icon_unread.ico",
+      "app/icon.png",
+      "app/icon_unread.png",
+      "app/icon.icns",
+      "app/icon_unread.icns"
     ],
     "extraResources": [
       {

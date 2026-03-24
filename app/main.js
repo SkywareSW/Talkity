@@ -49,8 +49,6 @@ function getServerScriptPath() {
   return path.join(__dirname, '..', 'server', 'index.js');
 }
 
-
-
 // ── Window ────────────────────────────────────────────────────────
 
 function createWindow() {
@@ -67,7 +65,10 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
     },
-    icon: path.join(__dirname, 'icon.png'),
+    // FIX: use .ico on Windows so the taskbar & Start Menu show the icon correctly
+    icon: process.platform === 'win32'
+      ? path.join(__dirname, 'icon.ico')
+      : path.join(__dirname, 'icon.png'),
     titleBarStyle: 'hidden',
   });
 
@@ -178,8 +179,14 @@ ipcMain.on('window:close', () => mainWindow?.close());
 
 // ── Icon state ────────────────────────────────────────────────────
 
-const ICON_NORMAL = path.join(__dirname, 'icon.png');
-const ICON_UNREAD = path.join(__dirname, 'icon_unread.png');
+// FIX: use .ico on Windows for taskbar overlay icons
+const ICON_NORMAL = process.platform === 'win32'
+  ? path.join(__dirname, 'icon.ico')
+  : path.join(__dirname, 'icon.png');
+
+const ICON_UNREAD = process.platform === 'win32'
+  ? path.join(__dirname, 'icon_unread.ico')
+  : path.join(__dirname, 'icon_unread.png');
 
 ipcMain.on('icon:set', (_, state) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;

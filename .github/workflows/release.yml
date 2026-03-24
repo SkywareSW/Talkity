@@ -21,6 +21,8 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: cd server && npm ci
+      - name: Rebuild better-sqlite3 for Electron
+        run: npx @electron/rebuild -f -w better-sqlite3 --module-dir server
       - name: Build and publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -43,6 +45,8 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: cd server && npm ci
+      - name: Rebuild better-sqlite3 for Electron
+        run: npx @electron/rebuild -f -w better-sqlite3 --module-dir server
       - name: Import macOS signing certificate
         if: env.APPLE_CERTIFICATE != ''
         env:
@@ -88,6 +92,8 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: cd server && npm ci
+      - name: Rebuild better-sqlite3 for Electron
+        run: npx @electron/rebuild -f -w better-sqlite3 --module-dir server
       - run: sudo apt-get update && sudo apt-get install -y rpm fakeroot dpkg
       - name: Build and publish
         env:

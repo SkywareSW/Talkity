@@ -11,7 +11,8 @@
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
-    "release": "electron-builder --publish always"
+    "release": "electron-builder --publish always",
+    "postinstall": "electron-rebuild -f -w better-sqlite3 --module-dir server"
   },
   "author": "SkywareSW",
   "dependencies": {
@@ -21,7 +22,8 @@
   },
   "devDependencies": {
     "electron": "^29.0.0",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "@electron/rebuild": "^3.6.0"
   },
   "build": {
     "appId": "com.talkity.app",

@@ -74,6 +74,10 @@ jobs:
           APPLE_TEAM_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_TEAM_ID || '' }}
           CSC_LINK: ${{ matrix.platform == 'mac' && secrets.APPLE_CERTIFICATE || '' }}
           CSC_KEY_PASSWORD: ${{ matrix.platform == 'mac' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          # Explicitly blank out Windows signing vars so electron-builder
+          # never tries to codesign on the Windows runner
+          WIN_CSC_LINK: ''
+          WIN_CSC_KEY_PASSWORD: ''
         run: npm run release -- --${{ matrix.platform }}
 
       # ── Upload artifacts for inspection (optional) ──────────────

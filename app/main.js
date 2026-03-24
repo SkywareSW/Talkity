@@ -222,7 +222,6 @@ ipcMain.handle('server:start', async (_, { useNgrok }) => {
   };
 
   return new Promise((resolve) => {
-    const nodeBin = getNodeBinaryPath();
     serverProcess = spawn(process.execPath, [serverPath], {
       env: serverEnv,
       cwd: path.dirname(serverPath),

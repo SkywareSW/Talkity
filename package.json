@@ -13,13 +13,13 @@
     "build:linux": "electron-builder --linux",
     "release": "electron-builder --publish always"
   },
+  "author": "SkywareSW",
   "dependencies": {
     "concurrently": "^8.2.2",
     "electron-updater": "^6.1.7",
     "socket.io-client": "^4.7.4"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.3",
     "electron": "^29.0.0",
     "electron-builder": "^24.9.1"
   },
@@ -56,12 +56,12 @@
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         }
       ],
-      "icon": "app/icon.ico"
+      "icon": "app/icon.ico",
+      "sign": false,
+      "signingHashAlgorithms": null
     },
     "nsis": {
       "oneClick": false,
@@ -79,10 +79,7 @@
       "target": [
         {
           "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
+          "arch": ["x64", "arm64"]
         }
       ],
       "icon": "app/icon.icns",
@@ -100,15 +97,11 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         },
         {
           "target": "deb",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         }
       ],
       "icon": "app/icon.png",

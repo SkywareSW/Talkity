@@ -1,14 +1,11 @@
 name: Build & Release
-
 on:
   push:
     tags:
       - 'v*'          # triggers on v1.0.0, v1.2.3, etc.
   workflow_dispatch:  # allows manual trigger from GitHub UI
-
 permissions:
   contents: write     # needed to create GitHub Releases
-
 jobs:
   build:
     strategy:
@@ -21,9 +18,7 @@ jobs:
             platform: mac
           - os: ubuntu-latest
             platform: linux
-
     runs-on: ${{ matrix.os }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,12 +68,12 @@ jobs:
       - name: Build and publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Optional Apple credentials for notarization:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
-          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # Apple credentials — only populated on mac runner
+          APPLE_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.platform == 'mac' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_TEAM_ID || '' }}
+          CSC_LINK: ${{ matrix.platform == 'mac' && secrets.APPLE_CERTIFICATE || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.platform == 'mac' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
         run: npm run release -- --${{ matrix.platform }}
 
       # ── Upload artifacts for inspection (optional) ──────────────

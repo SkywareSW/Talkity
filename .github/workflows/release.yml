@@ -2,47 +2,49 @@ name: Build & Release
 on:
   push:
     tags:
-      - 'v*'          # triggers on v1.0.0, v1.2.3, etc.
-  workflow_dispatch:  # allows manual trigger from GitHub UI
+      - 'v*'
+  workflow_dispatch:
 permissions:
-  contents: write     # needed to create GitHub Releases
-jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            platform: win
-          - os: macos-latest
-            platform: mac
-          - os: ubuntu-latest
-            platform: linux
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  contents: write
 
-      # ── Node setup ──────────────────────────────────────────────
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+jobs:
+  # ── Windows ────────────────────────────────────────────────────────
+  build-win:
+    runs-on: windows-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+      - run: npm ci
+      - run: cd server && npm ci
+      - name: Build and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release -- --win
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: talkity-win
+          path: dist/*.exe
+          retention-days: 7
 
-      # ── Install root deps (electron, electron-builder) ──────────
-      - name: Install root dependencies
-        run: npm ci
-
-      # ── Install server deps so they're bundled in extraResources ─
-      - name: Install server dependencies
-        run: |
-          cd server
-          npm ci
-
-      # ── macOS: import signing cert if available ─────────────────
+  # ── macOS ──────────────────────────────────────────────────────────
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: cd server && npm ci
       - name: Import macOS signing certificate
-        if: matrix.platform == 'mac' && env.APPLE_CERTIFICATE != ''
+        if: env.APPLE_CERTIFICATE != ''
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -56,45 +58,46 @@ jobs:
             -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: \
             -s -k "$KEYCHAIN_PASSWORD" build.keychain
-
-      # ── Linux: install required native libs ─────────────────────
-      - name: Install Linux build deps
-        if: matrix.platform == 'linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y rpm fakeroot dpkg
-
-      # ── Build & publish ─────────────────────────────────────────
-      - name: Unset Windows signing vars
-        if: matrix.platform == 'win'
-        shell: pwsh
-        run: |
-          echo "WIN_CSC_LINK=" >> $env:GITHUB_ENV
-          echo "WIN_CSC_KEY_PASSWORD=" >> $env:GITHUB_ENV
-          echo "CSC_LINK=" >> $env:GITHUB_ENV
-          echo "CSC_KEY_PASSWORD=" >> $env:GITHUB_ENV
-
       - name: Build and publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ matrix.platform == 'mac' && 'true' || 'false' }}
-          # Apple credentials — only populated on mac runner
-          APPLE_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_ID || '' }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.platform == 'mac' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_TEAM_ID || '' }}
-          CSC_LINK: ${{ matrix.platform == 'mac' && secrets.APPLE_CERTIFICATE || '' }}
-          CSC_KEY_PASSWORD: ${{ matrix.platform == 'mac' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
-        run: npm run release -- --${{ matrix.platform }}
-
-      # ── Upload artifacts for inspection (optional) ──────────────
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run release -- --mac
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: talkity-${{ matrix.platform }}
+          name: talkity-mac
+          path: dist/*.dmg
+          retention-days: 7
+
+  # ── Linux ──────────────────────────────────────────────────────────
+  build-linux:
+    runs-on: ubuntu-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: cd server && npm ci
+      - run: sudo apt-get update && sudo apt-get install -y rpm fakeroot dpkg
+      - name: Build and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release -- --linux
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: talkity-linux
           path: |
-            dist/*.exe
-            dist/*.dmg
             dist/*.AppImage
             dist/*.deb
           retention-days: 7
